@@ -43,5 +43,17 @@ npm run build    # проверка сборки
 ## Скриншоты
 Лежат в `docs/screenshots/`: `meetings.png`, `meeting.png`, `new.png`, `tasks.png`.
 
+### Список собраний
+![Список собраний](docs/screenshots/meetings.png)
+
+### Протокол собрания
+![Протокол собрания](docs/screenshots/meeting.png)
+
+### Новое собрание
+![Новое собрание](docs/screenshots/new.png)
+
+### Задачи и дедлайны
+![Задачи и дедлайны](docs/screenshots/tasks.png)
+
 ## Изменения интерфейса
 Пока нет.
