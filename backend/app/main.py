@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import models  # noqa: F401  (регистрирует таблицы в Base.metadata)
 from .config import settings
 from .database import Base, engine
-from .routers import meetings
+from .routers import meetings, tasks
 
 
 @asynccontextmanager
@@ -26,6 +26,7 @@ app.add_middleware(
 )
 
 app.include_router(meetings.router)
+app.include_router(tasks.router)
 
 
 @app.get("/health", tags=["service"])

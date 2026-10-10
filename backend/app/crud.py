@@ -57,3 +57,45 @@ def delete_meeting(db: Session, meeting: models.Meeting) -> None:
     # Повестка, решения и задачи удаляются каскадом
     db.delete(meeting)
     db.commit()
+
+
+# ---------- Задачи ----------
+def list_tasks(
+    db: Session,
+    meeting_id: int | None = None,
+    status: schemas.TaskStatus | None = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> list[models.Task]:
+    query = select(models.Task).order_by(models.Task.deadline, models.Task.id)
+    if meeting_id is not None:
+        query = query.where(models.Task.meeting_id == meeting_id)
+    if status is not None:
+        query = query.where(models.Task.status == status.value)
+    return list(db.scalars(query.offset(skip).limit(limit)))
+
+
+def get_task(db: Session, task_id: int) -> models.Task | None:
+    return db.get(models.Task, task_id)
+
+
+def create_task(db: Session, data: schemas.TaskCreate) -> models.Task:
+    task = models.Task(**data.model_dump(mode="python"))
+    task.status = data.status.value
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def update_task(db: Session, task: models.Task, data: schemas.TaskUpdate) -> models.Task:
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(task, field, value.value if field == "status" else value)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def delete_task(db: Session, task: models.Task) -> None:
+    db.delete(task)
+    db.commit()

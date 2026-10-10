@@ -1,4 +1,5 @@
 import datetime as dt
+from enum import Enum
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
@@ -6,6 +7,44 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 # Строка без пробелов по краям, длиной от 1 символа
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+
+
+class TaskStatus(str, Enum):
+    in_progress = "in_progress"  # «В работе»
+    done = "done"  # «Готово»
+    postponed = "postponed"  # «Отложена»
+
+
+# ---------- Задачи ----------
+class TaskBase(BaseModel):
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    assignee: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+    deadline: dt.date
+    status: TaskStatus = TaskStatus.in_progress
+
+
+class TaskCreate(TaskBase):
+    meeting_id: int
+
+
+class TaskUpdate(BaseModel):
+    """Частичное обновление: передаются только изменяемые поля."""
+
+    title: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)
+    ] = None
+    assignee: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)
+    ] = None
+    deadline: dt.date | None = None
+    status: TaskStatus | None = None
+
+
+class TaskOut(TaskBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    meeting_id: int
 
 
 # ---------- Собрания ----------
@@ -40,6 +79,7 @@ class MeetingOut(MeetingBase):
     # как в демо-данных frontend (data.ts)
     agenda: list[str] = Field(default=[], validation_alias="agenda_items")
     decisions: list[str] = []
+    tasks: list[TaskOut] = []
 
     @field_validator("agenda", "decisions", mode="before")
     @classmethod
