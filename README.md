@@ -152,6 +152,22 @@ pytest -v
 ### Задачи и дедлайны
 ![Задачи и дедлайны](docs/screenshots/tasks.png)
 
+## Проверка на PostgreSQL
+Ручная проверка API через Swagger на реальной БД. Скриншоты лежат в `docs/api-check/`.
+
+| Проверка | Результат |
+|---|---|
+| Создание собрания с повесткой и решениями | ![01](docs/api-check/01-post-meeting-201.png) |
+| Создание задачи | ![02](docs/api-check/02-post-task-201.png) |
+| Чтение собрания со связанной задачей | ![03](docs/api-check/03-get-meeting-with-tasks-200.png) |
+| Изменение задачи | ![04](docs/api-check/04-patch-task-200.png) |
+| Фильтр задач по статусу | ![05](docs/api-check/05-filter-tasks-200.png) |
+| Несуществующее собрание (404) | ![06](docs/api-check/06-get-meeting-404.png) |
+| Пустое название (422) | ![07](docs/api-check/07-post-meeting-empty-title-422.png) |
+| `null` в обязательном поле (422) | ![08](docs/api-check/08-patch-meeting-null-422.png) |
+| Удаление собрания | ![09](docs/api-check/09-delete-meeting-204.png) |
+| Каскад: задача удалена вместе с собранием | ![10](docs/api-check/10-cascade-task-404.png) |
+
 ## Изменения интерфейса
 Пока нет. Кнопка «Сохранить» на экране «Новое собрание» не сохраняет данные: это появится
 после подключения frontend к API.
