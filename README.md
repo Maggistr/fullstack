@@ -135,7 +135,7 @@ pytest -v
 При каждом push GitHub Actions (`.github/workflows/ci.yml`) запускает `pytest` для backend
 и `npm run build` для frontend.
 
-Дополнительно API можно проверить вручную через Swagger (`/docs`) на реальном PostgreSQL.
+Ручная проверка на реальном PostgreSQL описана в разделе «Проверка на PostgreSQL» ниже.
 
 ## Скриншоты
 Лежат в `docs/screenshots/`.
