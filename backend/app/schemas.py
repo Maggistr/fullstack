@@ -39,6 +39,14 @@ class TaskUpdate(BaseModel):
     deadline: dt.date | None = None
     status: TaskStatus | None = None
 
+    @field_validator("title", "assignee", "deadline", "status", mode="before")
+    @classmethod
+    def not_null(cls, value):
+        # Поле можно не передавать, но нельзя явно передать null
+        if value is None:
+            raise ValueError("значение не может быть null")
+        return value
+
 
 class TaskOut(TaskBase):
     model_config = ConfigDict(from_attributes=True)
@@ -69,6 +77,14 @@ class MeetingUpdate(BaseModel):
     audio_path: str | None = Field(default=None, max_length=500)
     agenda: list[Text] | None = None
     decisions: list[Text] | None = None
+
+    @field_validator("title", "date", "summary", "agenda", "decisions", mode="before")
+    @classmethod
+    def not_null(cls, value):
+        # audio_path можно обнулить, остальные поля нельзя
+        if value is None:
+            raise ValueError("значение не может быть null")
+        return value
 
 
 class MeetingOut(MeetingBase):
