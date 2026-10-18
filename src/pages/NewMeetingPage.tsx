@@ -8,7 +8,6 @@ export default function NewMeetingPage() {
   const [date, setDate] = useState("");
   const [agenda, setAgenda] = useState("");
 
-  // Пока без backend: просто возвращаемся к списку
   const handleSave = () => navigate("/");
 
   return (

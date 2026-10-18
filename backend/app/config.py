@@ -16,7 +16,6 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> URL:
-        # URL.create сам экранирует спецсимволы в пароле
         return URL.create(
             "postgresql+psycopg2",
             username=self.postgres_user,

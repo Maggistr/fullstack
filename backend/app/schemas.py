@@ -4,7 +4,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-# Строка без пробелов по краям, длиной от 1 символа
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 
@@ -81,7 +80,6 @@ class MeetingUpdate(BaseModel):
     @field_validator("title", "date", "summary", "agenda", "decisions", mode="before")
     @classmethod
     def not_null(cls, value):
-        # audio_path можно обнулить, остальные поля нельзя
         if value is None:
             raise ValueError("значение не может быть null")
         return value
@@ -91,8 +89,6 @@ class MeetingOut(MeetingBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    # В БД это отдельные таблицы, а наружу отдаём простые списки строк,
-    # как в демо-данных frontend (data.ts)
     agenda: list[str] = Field(default=[], validation_alias="agenda_items")
     decisions: list[str] = []
     tasks: list[TaskOut] = []

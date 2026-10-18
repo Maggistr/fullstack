@@ -11,7 +11,6 @@ from .routers import meetings, tasks
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Создаёт таблицы, которых ещё нет (существующие не трогает)
     Base.metadata.create_all(bind=engine)
     yield
 

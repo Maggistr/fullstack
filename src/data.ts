@@ -1,4 +1,3 @@
-// Демонстрационные данные (до подключения backend)
 export interface Task {
   id: number;
   title: string;

@@ -1,7 +1,5 @@
 import os
 
-# Настройки нужны до импорта приложения. Тесты не подключаются к PostgreSQL:
-# реальная БД подменяется SQLite в памяти (см. фикстуру client).
 os.environ.setdefault("POSTGRES_USER", "test")
 os.environ.setdefault("POSTGRES_PASSWORD", "test")
 os.environ.setdefault("POSTGRES_DB", "test")
