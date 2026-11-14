@@ -1,5 +1,5 @@
 import { DependencyList, useCallback, useEffect, useState } from "react";
-import { ApiError } from "../api/fakeServer";
+import { ApiError } from "../api/ApiError";
 
 export type AsyncState<T> =
   | { status: "loading" }

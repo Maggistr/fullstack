@@ -1,29 +1,36 @@
-import { ApiError, simulateRequest } from "@/shared/api/fakeServer";
-import { initialTasks } from "../model/demoData";
+import { apiRequest } from "@/shared/api/http";
 import type { NewTask, Task, TaskStatus } from "../model/types";
 
-const tasks: Task[] = [...initialTasks];
-let nextId = Math.max(0, ...tasks.map((t) => t.id)) + 1;
+interface TaskDto {
+  id: number;
+  meeting_id: number;
+  title: string;
+  assignee: string;
+  deadline: string;
+  status: TaskStatus;
+}
 
-export const listTasks = (): Promise<Task[]> =>
-  simulateRequest(() => [...tasks].sort((a, b) => a.deadline.localeCompare(b.deadline)));
+const toTask = (dto: TaskDto): Task => ({
+  id: dto.id,
+  meetingId: dto.meeting_id,
+  title: dto.title,
+  assignee: dto.assignee,
+  deadline: dto.deadline,
+  status: dto.status,
+});
 
-export const listTasksByMeeting = (meetingId: number): Promise<Task[]> =>
-  simulateRequest(() =>
-    tasks.filter((t) => t.meetingId === meetingId).sort((a, b) => a.deadline.localeCompare(b.deadline)),
+export const listTasks = async (): Promise<Task[]> => (await apiRequest<TaskDto[]>("/tasks")).map(toTask);
+
+export const listTasksByMeeting = async (meetingId: number): Promise<Task[]> =>
+  (await apiRequest<TaskDto[]>(`/tasks?meeting_id=${meetingId}`)).map(toTask);
+
+export const createTask = async (input: NewTask): Promise<Task> =>
+  toTask(
+    await apiRequest<TaskDto>("/tasks", {
+      method: "POST",
+      json: { meeting_id: input.meetingId, title: input.title, assignee: input.assignee, deadline: input.deadline },
+    }),
   );
 
-export const createTask = (input: NewTask): Promise<Task> =>
-  simulateRequest(() => {
-    const task: Task = { ...input, id: nextId++, status: "in_progress" };
-    tasks.push(task);
-    return task;
-  });
-
-export const updateTaskStatus = (id: number, status: TaskStatus): Promise<Task> =>
-  simulateRequest(() => {
-    const task = tasks.find((t) => t.id === id);
-    if (!task) throw new ApiError(`Задача с id=${id} не найдена`, 404);
-    task.status = status;
-    return { ...task };
-  });
+export const updateTaskStatus = async (id: number, status: TaskStatus): Promise<Task> =>
+  toTask(await apiRequest<TaskDto>(`/tasks/${id}`, { method: "PATCH", json: { status } }));

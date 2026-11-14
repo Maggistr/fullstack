@@ -6,7 +6,18 @@ export interface Meeting {
   agenda: string[];
   summary: string;
   decisions: string[];
+  /** Имя аудиофайла (backend пока хранит только имя, сам файл не загружается). */
   audioName: string | null;
+}
+
+/** Краткая запись из списка собраний. */
+export interface MeetingListItem {
+  id: number;
+  title: string;
+  date: string;
+  audioName: string | null;
+  agendaCount: number;
+  decisionsCount: number;
 }
 
 export type NewMeeting = Pick<Meeting, "title" | "date" | "agenda" | "audioName">;

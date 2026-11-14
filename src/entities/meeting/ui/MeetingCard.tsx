@@ -3,10 +3,10 @@ import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui
 import MicNoneIcon from "@mui/icons-material/MicNone";
 import { formatDate } from "@/shared/lib/date";
 import { plural } from "@/shared/lib/plural";
-import type { Meeting } from "../model/types";
+import type { MeetingListItem } from "../model/types";
 
 interface MeetingCardProps {
-  meeting: Meeting;
+  meeting: MeetingListItem;
 }
 
 export default function MeetingCard({ meeting }: MeetingCardProps) {
@@ -24,11 +24,11 @@ export default function MeetingCard({ meeting }: MeetingCardProps) {
             {formatDate(meeting.date)}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Chip size="small" variant="outlined" label={plural(meeting.agenda.length, ["пункт", "пункта", "пунктов"])} />
+            <Chip size="small" variant="outlined" label={plural(meeting.agendaCount, ["пункт", "пункта", "пунктов"])} />
             <Chip
               size="small"
               variant="outlined"
-              label={plural(meeting.decisions.length, ["решение", "решения", "решений"])}
+              label={plural(meeting.decisionsCount, ["решение", "решения", "решений"])}
             />
             {meeting.audioName && (
               <Chip size="small" variant="outlined" icon={<MicNoneIcon />} label="Есть аудиозапись" />

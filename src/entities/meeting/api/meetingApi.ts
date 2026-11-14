@@ -1,23 +1,54 @@
-import { ApiError, simulateRequest } from "@/shared/api/fakeServer";
-import { initialMeetings } from "../model/demoData";
-import type { Meeting, NewMeeting } from "../model/types";
+import { apiRequest } from "@/shared/api/http";
+import type { Meeting, MeetingListItem, NewMeeting } from "../model/types";
 
-const meetings: Meeting[] = [...initialMeetings];
-let nextId = Math.max(0, ...meetings.map((m) => m.id)) + 1;
+interface MeetingOutDto {
+  id: number;
+  title: string;
+  date: string;
+  summary: string;
+  audio_path: string | null;
+  agenda: string[];
+  decisions: string[];
+}
 
-export const listMeetings = (): Promise<Meeting[]> =>
-  simulateRequest(() => [...meetings].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id));
+interface MeetingShortDto {
+  id: number;
+  title: string;
+  date: string;
+  audio_path: string | null;
+  agenda_count: number;
+  decisions_count: number;
+}
 
-export const getMeeting = (id: number): Promise<Meeting> =>
-  simulateRequest(() => {
-    const meeting = meetings.find((m) => m.id === id);
-    if (!meeting) throw new ApiError(`Собрание с id=${id} не найдено`, 404);
-    return meeting;
-  });
+const toMeeting = (dto: MeetingOutDto): Meeting => ({
+  id: dto.id,
+  title: dto.title,
+  date: dto.date,
+  summary: dto.summary,
+  agenda: dto.agenda,
+  decisions: dto.decisions,
+  audioName: dto.audio_path,
+});
 
-export const createMeeting = (input: NewMeeting): Promise<Meeting> =>
-  simulateRequest(() => {
-    const meeting: Meeting = { ...input, id: nextId++, summary: "", decisions: [] };
-    meetings.push(meeting);
-    return meeting;
-  });
+export const listMeetings = async (): Promise<MeetingListItem[]> => {
+  const items = await apiRequest<MeetingShortDto[]>("/meetings");
+  return items.map((m) => ({
+    id: m.id,
+    title: m.title,
+    date: m.date,
+    audioName: m.audio_path,
+    agendaCount: m.agenda_count,
+    decisionsCount: m.decisions_count,
+  }));
+};
+
+export const getMeeting = async (id: number): Promise<Meeting> =>
+  toMeeting(await apiRequest<MeetingOutDto>(`/meetings/${id}`));
+
+export const createMeeting = async (input: NewMeeting): Promise<Meeting> =>
+  toMeeting(
+    await apiRequest<MeetingOutDto>("/meetings", {
+      method: "POST",
+      json: { title: input.title, date: input.date, agenda: input.agenda, audio_path: input.audioName },
+    }),
+  );

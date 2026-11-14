@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { AppBar, Box, Button, Container, Fade, Toolbar, Typography } from "@mui/material";
+import { LogoutButton } from "@/features/logout";
+import { useAuth } from "@/entities/user";
 
 const NAV_ITEMS = [
   { to: "/", label: "Собрания", end: true },
@@ -9,6 +11,7 @@ const NAV_ITEMS = [
 
 export default function AppLayout() {
   const { pathname } = useLocation();
+  const { user } = useAuth();
 
   return (
     <Box>
@@ -34,6 +37,10 @@ export default function AppLayout() {
               {item.label}
             </Button>
           ))}
+          <Typography variant="body2" sx={{ ml: 1, opacity: 0.85 }} data-testid="current-user">
+            {user?.name}
+          </Typography>
+          <LogoutButton />
         </Toolbar>
       </AppBar>
       <Container sx={{ py: 3 }} maxWidth="md">

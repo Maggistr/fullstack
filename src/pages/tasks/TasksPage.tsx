@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { Button, Fade, Link, Paper, Skeleton, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import { TransitionGroup } from "react-transition-group";
-import { Meeting, listMeetings } from "@/entities/meeting";
+import { MeetingListItem, listMeetings } from "@/entities/meeting";
 import { DeadlineText, Task, TaskStatusChip, listTasks } from "@/entities/task";
 import { AddTaskForm } from "@/features/add-task";
 import { TaskStatusSelect } from "@/features/change-task-status";
@@ -12,7 +12,7 @@ import { useAsync } from "@/shared/lib/useAsync";
 
 interface TasksData {
   tasks: Task[];
-  meetings: Meeting[];
+  meetings: MeetingListItem[];
 }
 
 export default function TasksPage() {
