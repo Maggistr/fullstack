@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -11,6 +12,11 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     cors_origins: str = "http://localhost:5173"
+
+    jwt_secret_key: str = Field(min_length=32)
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = Field(default=15, ge=1)
+    refresh_token_expire_days: int = Field(default=7, ge=1)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

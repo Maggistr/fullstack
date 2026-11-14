@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import models  # noqa: F401  (регистрирует таблицы в Base.metadata)
 from .config import settings
 from .database import Base, engine
-from .routers import meetings, tasks
+from .routers import auth, meetings, tasks
 
 
 @asynccontextmanager
@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Протоколы собраний — API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Протоколы собраний — API", version="0.4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(meetings.router)
 app.include_router(tasks.router)
 

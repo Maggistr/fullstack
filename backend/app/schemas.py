@@ -2,7 +2,7 @@ import datetime as dt
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
 
 Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -12,6 +12,38 @@ class TaskStatus(str, Enum):
     in_progress = "in_progress"  # «В работе»
     done = "done"  # «Готово»
     postponed = "postponed"  # «Отложена»
+
+
+# ---------- Пользователи и токены ----------
+class UserCreate(BaseModel):
+    email: EmailStr
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
+    password: Annotated[str, StringConstraints(min_length=8, max_length=128)]
+
+    @field_validator("email")
+    @classmethod
+    def lower_email(cls, value: str) -> str:
+        return value.lower()
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    name: str
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    # Срок действия access token в секундах
+    expires_in: int
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: Annotated[str, StringConstraints(min_length=1, max_length=512)]
 
 
 # ---------- Задачи ----------
@@ -108,3 +140,5 @@ class MeetingShort(BaseModel):
     title: str
     date: dt.date
     audio_path: str | None = None
+    agenda_count: int = 0
+    decisions_count: int = 0
