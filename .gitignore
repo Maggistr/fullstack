@@ -13,3 +13,5 @@ venv
 .idea
 .vscode
 *.sh
+!scripts/*.sh
+.run/
