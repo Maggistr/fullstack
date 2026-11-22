@@ -21,3 +21,6 @@ export interface MeetingListItem {
 }
 
 export type NewMeeting = Pick<Meeting, "title" | "date" | "agenda" | "audioName">;
+
+/** Изменяемые поля собрания. Списки заменяются целиком. */
+export type MeetingPatch = Partial<Pick<Meeting, "title" | "date" | "summary" | "agenda" | "decisions">>;

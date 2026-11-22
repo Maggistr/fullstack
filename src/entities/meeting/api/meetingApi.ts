@@ -1,5 +1,5 @@
 import { apiRequest } from "@/shared/api/http";
-import type { Meeting, MeetingListItem, NewMeeting } from "../model/types";
+import type { Meeting, MeetingListItem, MeetingPatch, NewMeeting } from "../model/types";
 
 interface MeetingOutDto {
   id: number;
@@ -52,3 +52,8 @@ export const createMeeting = async (input: NewMeeting): Promise<Meeting> =>
       json: { title: input.title, date: input.date, agenda: input.agenda, audio_path: input.audioName },
     }),
   );
+
+export const updateMeeting = async (id: number, patch: MeetingPatch): Promise<Meeting> =>
+  toMeeting(await apiRequest<MeetingOutDto>(`/meetings/${id}`, { method: "PATCH", json: patch }));
+
+export const deleteMeeting = (id: number): Promise<void> => apiRequest<void>(`/meetings/${id}`, { method: "DELETE" });

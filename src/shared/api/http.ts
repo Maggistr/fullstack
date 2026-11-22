@@ -25,10 +25,37 @@ export function setSessionLostHandler(handler: () => void) {
   onSessionLost = handler;
 }
 
+/** Названия полей API для сообщений пользователю. */
+const FIELD_LABELS: Record<string, string> = {
+  title: "Название",
+  date: "Дата",
+  summary: "Резюме",
+  agenda: "Повестка",
+  decisions: "Решения",
+  assignee: "Ответственный",
+  deadline: "Дедлайн",
+  status: "Статус",
+  meeting_id: "Собрание",
+  email: "Email",
+  name: "Имя",
+  password: "Пароль",
+};
+
+function validationMessage(detail: unknown[]): string {
+  const labels = new Set<string>();
+  for (const item of detail) {
+    const loc = (item as { loc?: unknown[] } | null)?.loc;
+    const field = Array.isArray(loc) ? loc.find((part) => typeof part === "string" && part !== "body" && part !== "path" && part !== "query") : undefined;
+    if (typeof field === "string") labels.add(FIELD_LABELS[field] ?? field);
+  }
+  return labels.size > 0 ? `Проверьте поля: ${[...labels].join(", ")}` : "Некорректные данные запроса";
+}
+
 function errorMessage(status: number, body: unknown): string {
   const detail = (body as { detail?: unknown } | null)?.detail;
   if (typeof detail === "string") return detail;
-  if (status === 422) return "Некорректные данные запроса";
+  if (status === 422) return Array.isArray(detail) ? validationMessage(detail) : "Некорректные данные запроса";
+  if (status === 403) return "Нет доступа к этим данным";
   return `Ошибка сервера (${status})`;
 }
 

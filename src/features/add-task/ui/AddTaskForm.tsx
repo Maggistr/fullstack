@@ -2,9 +2,8 @@ import { FormEvent, useState } from "react";
 import { Alert, Box, Button, CircularProgress, Collapse, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import { Task, createTask } from "@/entities/task";
 import { hasErrors } from "@/shared/lib/validation";
-import { TaskFormValues, validateTaskForm } from "../model/validation";
+import { Task, TaskFormValues, createTask, validateTaskForm } from "@/entities/task";
 
 interface AddTaskFormProps {
   /** Если задан, задача создаётся для этого собрания и выбор собрания скрыт. */

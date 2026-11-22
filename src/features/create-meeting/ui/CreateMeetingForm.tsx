@@ -1,27 +1,19 @@
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
-import { Alert, Box, Button, Chip, CircularProgress, Collapse, FormHelperText, IconButton, Stack, TextField, Typography } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { Alert, Box, Button, Chip, CircularProgress, Collapse, FormHelperText, Stack, TextField, Typography } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
-import { TransitionGroup } from "react-transition-group";
 import { Meeting, createMeeting } from "@/entities/meeting";
 import { todayIso } from "@/shared/lib/date";
+import StringListEditor from "@/shared/ui/StringListEditor";
 import { isMeetingFormValid, MeetingFormValues, validateMeetingForm } from "../model/validation";
 
 interface CreateMeetingFormProps {
   onCreated: (meeting: Meeting) => void;
 }
 
-interface AgendaRow {
-  key: number;
-  text: string;
-}
-
 export default function CreateMeetingForm({ onCreated }: CreateMeetingFormProps) {
-  const nextKey = useRef(2);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayIso());
-  const [rows, setRows] = useState<AgendaRow[]>([{ key: 1, text: "" }]);
+  const [agenda, setAgenda] = useState<string[]>([""]);
   const [audio, setAudio] = useState<File | null>(null);
 
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -29,16 +21,11 @@ export default function CreateMeetingForm({ onCreated }: CreateMeetingFormProps)
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const values: MeetingFormValues = { title, date, agenda: rows.map((r) => r.text), audio };
-  const errors = useMemo(() => validateMeetingForm(values), [title, date, rows, audio]); // eslint-disable-line react-hooks/exhaustive-deps
+  const values: MeetingFormValues = { title, date, agenda, audio };
+  const errors = useMemo(() => validateMeetingForm(values), [title, date, agenda, audio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const touch = (field: string) => setTouched((prev) => new Set(prev).add(field));
   const shown = (field: string) => submitted || touched.has(field);
-
-  const addRow = () => setRows((prev) => [...prev, { key: nextKey.current++, text: "" }]);
-  const removeRow = (key: number) => setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.key !== key) : prev));
-  const changeRow = (key: number, text: string) =>
-    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, text } : r)));
 
   const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
     setAudio(e.target.files?.[0] ?? null);
@@ -57,7 +44,7 @@ export default function CreateMeetingForm({ onCreated }: CreateMeetingFormProps)
       const meeting = await createMeeting({
         title: title.trim(),
         date,
-        agenda: rows.map((r) => r.text.trim()).filter(Boolean),
+        agenda: agenda.map((x) => x.trim()).filter(Boolean),
         audioName: audio?.name ?? null,
       });
       onCreated(meeting);
@@ -99,36 +86,17 @@ export default function CreateMeetingForm({ onCreated }: CreateMeetingFormProps)
           <Typography variant="subtitle1" gutterBottom>
             Повестка
           </Typography>
-          <TransitionGroup>
-            {rows.map((row, index) => (
-              <Collapse key={row.key}>
-                <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ pb: 1.5 }}>
-                  <TextField
-                    label={`Пункт ${index + 1}`}
-                    value={row.text}
-                    onChange={(e) => changeRow(row.key, e.target.value)}
-                    onBlur={() => touch("agenda")}
-                    error={shown("agenda") && !!errors.agendaItems[index]}
-                    helperText={shown("agenda") ? errors.agendaItems[index] : undefined}
-                    disabled={saving}
-                    size="small"
-                    fullWidth
-                  />
-                  <IconButton
-                    aria-label={`Удалить пункт ${index + 1}`}
-                    onClick={() => removeRow(row.key)}
-                    disabled={saving || rows.length === 1}
-                  >
-                    <DeleteOutlineIcon />
-                  </IconButton>
-                </Stack>
-              </Collapse>
-            ))}
-          </TransitionGroup>
-          {shown("agenda") && errors.agenda && <FormHelperText error>{errors.agenda}</FormHelperText>}
-          <Button startIcon={<AddIcon />} onClick={addRow} disabled={saving} sx={{ mt: 0.5 }}>
-            Добавить пункт
-          </Button>
+          <StringListEditor
+            itemLabel="Пункт"
+            addLabel="Добавить пункт"
+            initial={[""]}
+            minRows={1}
+            onChange={setAgenda}
+            onBlur={() => touch("agenda")}
+            errors={shown("agenda") ? errors.agendaItems : undefined}
+            error={shown("agenda") ? errors.agenda : undefined}
+            disabled={saving}
+          />
         </Box>
 
         <Box>

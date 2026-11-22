@@ -36,7 +36,8 @@ export default function AsyncBoundary<T>({
   }
 
   if (state.status === "error") {
-    const canRetry = state.httpStatus !== 404;
+    // Повтор имеет смысл при сбоях сети и сервера, но не при «нет доступа» / «не найдено» / «некорректный запрос»
+    const canRetry = !(state.httpStatus !== undefined && state.httpStatus >= 400 && state.httpStatus < 500);
     return (
       <Alert
         severity="error"

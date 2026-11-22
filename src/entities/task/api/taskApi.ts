@@ -1,5 +1,5 @@
 import { apiRequest } from "@/shared/api/http";
-import type { NewTask, Task, TaskStatus } from "../model/types";
+import type { NewTask, Task, TaskPatch, TaskStatus } from "../model/types";
 
 interface TaskDto {
   id: number;
@@ -34,3 +34,8 @@ export const createTask = async (input: NewTask): Promise<Task> =>
 
 export const updateTaskStatus = async (id: number, status: TaskStatus): Promise<Task> =>
   toTask(await apiRequest<TaskDto>(`/tasks/${id}`, { method: "PATCH", json: { status } }));
+
+export const updateTask = async (id: number, patch: TaskPatch): Promise<Task> =>
+  toTask(await apiRequest<TaskDto>(`/tasks/${id}`, { method: "PATCH", json: patch }));
+
+export const deleteTask = (id: number): Promise<void> => apiRequest<void>(`/tasks/${id}`, { method: "DELETE" });

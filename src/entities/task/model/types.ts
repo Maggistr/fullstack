@@ -13,6 +13,9 @@ export interface Task {
 
 export type NewTask = Omit<Task, "id" | "status">;
 
+/** Изменяемые поля задачи (передаются только изменённые). */
+export type TaskPatch = Partial<Pick<Task, "title" | "assignee" | "deadline" | "status">>;
+
 export const TASK_STATUSES: readonly TaskStatus[] = ["in_progress", "done", "postponed"];
 
 export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
