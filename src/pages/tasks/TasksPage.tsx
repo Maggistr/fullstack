@@ -5,6 +5,8 @@ import { TransitionGroup } from "react-transition-group";
 import { MeetingListItem, listMeetings } from "@/entities/meeting";
 import { DeadlineText, Task, TaskStatusChip, listTasks } from "@/entities/task";
 import { AddTaskForm } from "@/features/add-task";
+import { DeleteTaskButton } from "@/features/delete-task";
+import { EditTaskButton } from "@/features/edit-task";
 import { TaskStatusSelect } from "@/features/change-task-status";
 import { DEFAULT_TASK_FILTER, TaskFilters, TaskFilterValue, applyTaskFilter, isFilterActive } from "@/features/filter-tasks";
 import AsyncBoundary from "@/shared/ui/AsyncBoundary";
@@ -83,6 +85,7 @@ export default function TasksPage() {
                         <TableCell>Дедлайн</TableCell>
                         <TableCell>Статус</TableCell>
                         <TableCell>Собрание</TableCell>
+                        <TableCell align="right">Действия</TableCell>
                       </TableRow>
                     </TableHead>
                     <TransitionGroup component={TableBody}>
@@ -112,6 +115,20 @@ export default function TasksPage() {
                               <Link component={RouterLink} to={`/meetings/${t.meetingId}`}>
                                 {titleOf(t.meetingId)}
                               </Link>
+                            </TableCell>
+                            <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                              <EditTaskButton
+                                task={t}
+                                onSaved={(updated) =>
+                                  update((d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === updated.id ? updated : x)) }))
+                                }
+                              />
+                              <DeleteTaskButton
+                                task={t}
+                                onDeleted={(removed) =>
+                                  update((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== removed.id) }))
+                                }
+                              />
                             </TableCell>
                           </TableRow>
                         </Fade>
