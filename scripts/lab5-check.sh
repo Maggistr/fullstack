@@ -11,13 +11,17 @@
 #   5. запускает тесты frontend, собирает его (tsc + vite build) и проверяет, что dev-сервер отвечает.
 #
 # Использование (из корня репозитория):
-#   bash scripts/lab5-check.sh [--no-docker] [--no-frontend] [--keep] [--reset-db]
+#   bash scripts/lab5-check.sh [--quick] [--install] [--no-docker] [--no-frontend] [--keep] [--reset-db]
 #
+#   --quick        только запуск: без pytest, сквозной проверки API, npm test и сборки (подразумевает --keep)
+#   --install      принудительно переустановить зависимости (pip install, npm ci)
 #   --no-docker    не трогать docker: PostgreSQL уже запущен, параметры в backend/.env
 #   --no-frontend  пропустить npm install / сборку / dev-сервер
 #   --keep         после проверки оставить backend и frontend запущенными (для демонстрации MVP)
 #   --reset-db     удалить том БД (docker compose down -v) и начать с чистой базы
 #   -h, --help     эта справка
+#
+# Зависимости ставятся только при первом запуске и при изменении requirements*.txt / package-lock.json.
 #
 # Код возврата: 0 — все проверки пройдены, 1 — есть ошибки.
 
@@ -28,12 +32,16 @@ USE_DOCKER=1
 USE_FRONTEND=1
 KEEP=0
 RESET_DB=0
+QUICK=0
+FORCE_INSTALL=0
 for arg in "$@"; do
   case "$arg" in
     --no-docker) USE_DOCKER=0 ;;
     --no-frontend) USE_FRONTEND=0 ;;
     --keep) KEEP=1 ;;
     --reset-db) RESET_DB=1 ;;
+    --quick) QUICK=1; KEEP=1 ;;
+    --install) FORCE_INSTALL=1 ;;
     -h | --help) sed -n '2,/^# Код возврата/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Неизвестный параметр: $arg (см. --help)"; exit 2 ;;
   esac
@@ -64,12 +72,19 @@ die() { fail "$*"; summary; exit 1; }
 
 BACKEND_PID=""
 FRONT_PID=""
+# Останавливает процесс вместе с его дочерними (на случай обёрток вроде npm)
+stop_proc() {
+  [ -n "${1:-}" ] || return 0
+  if command -v pkill >/dev/null 2>&1; then pkill -P "$1" 2>/dev/null; fi
+  kill "$1" 2>/dev/null
+  return 0
+}
 cleanup() {
   if [ "$KEEP" -eq 1 ] && [ "$FAILS" -eq 0 ]; then
     return
   fi
-  [ -n "$FRONT_PID" ] && kill "$FRONT_PID" 2>/dev/null
-  [ -n "$BACKEND_PID" ] && kill "$BACKEND_PID" 2>/dev/null
+  stop_proc "$FRONT_PID"
+  stop_proc "$BACKEND_PID"
   return 0
 }
 trap cleanup EXIT
@@ -138,13 +153,30 @@ done
 # ---------- 2. База данных ----------
 step "2. PostgreSQL"
 if [ "$USE_DOCKER" -eq 1 ]; then
+  : >"$LOG_DIR/db.log" # лог каждого запуска начинается заново
+  DC=(docker compose --env-file backend/.env)
   if [ "$RESET_DB" -eq 1 ]; then
-    docker compose --env-file backend/.env down -v >"$LOG_DIR/db.log" 2>&1 && ok "Том БД удалён (чистая база)"
+    "${DC[@]}" down -v >>"$LOG_DIR/db.log" 2>&1 && ok "Том БД удалён (чистая база)"
   fi
-  if docker compose --env-file backend/.env up -d db >>"$LOG_DIR/db.log" 2>&1; then
+  if "${DC[@]}" up -d db >>"$LOG_DIR/db.log" 2>&1; then
     ok "Контейнер db запущен"
+  elif [ -n "$("${DC[@]}" ps --status running -q db 2>/dev/null)" ]; then
+    # Бывает, что compose возвращает ошибку уже после старта (например, Docker Desktop перезапускает движок)
+    warn "docker compose сообщил об ошибке, но контейнер db работает — продолжаем (подробности: $LOG_DIR/db.log)"
   else
-    cat "$LOG_DIR/db.log"; die "Не удалось запустить контейнер db"
+    tail -15 "$LOG_DIR/db.log"
+    if grep -q "port is already allocated" "$LOG_DIR/db.log"; then
+      echo
+      echo "  Порт 5432 уже занят: его держит другой контейнер или PostgreSQL, установленный на самом компьютере."
+      echo "  Посмотреть контейнеры:        docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+      echo "  Удалить старый контейнер:     docker rm -f <имя>"
+      echo "  Кто слушает порт в WSL:       ss -ltnp | grep 5432"
+      echo "  Кто слушает порт в Windows:   netstat -ano | findstr :5432   (в PowerShell)"
+    elif grep -q "dockerDesktopLinuxEngine\|Cannot connect to the Docker daemon" "$LOG_DIR/db.log"; then
+      echo
+      echo "  Docker не отвечает. Запустите Docker Desktop, дождитесь «Engine running» и повторите."
+    fi
+    die "Не удалось запустить контейнер db"
   fi
 else
   warn "--no-docker: ожидается, что PostgreSQL уже запущен с параметрами из backend/.env"
@@ -156,13 +188,21 @@ if [ ! -d backend/.venv ]; then
   "$PY_SYS" -m venv backend/.venv >"$LOG_DIR/venv.log" 2>&1 || { cat "$LOG_DIR/venv.log"; die "Не удалось создать venv"; }
 fi
 if [ -x backend/.venv/bin/python ]; then VENV_PY="$ROOT/backend/.venv/bin/python"; else VENV_PY="$ROOT/backend/.venv/Scripts/python.exe"; fi
-if "$VENV_PY" -m pip install -q -r backend/requirements-dev.txt >"$LOG_DIR/pip.log" 2>&1; then
-  ok "Зависимости установлены"
+DEPS_MARK="backend/.venv/.deps-installed"
+if [ "$FORCE_INSTALL" -eq 1 ] || [ ! -f "$DEPS_MARK" ] \
+  || [ backend/requirements.txt -nt "$DEPS_MARK" ] || [ backend/requirements-dev.txt -nt "$DEPS_MARK" ]; then
+  if "$VENV_PY" -m pip install -q -r backend/requirements-dev.txt >"$LOG_DIR/pip.log" 2>&1; then
+    touch "$DEPS_MARK"; ok "Зависимости установлены"
+  else
+    tail -20 "$LOG_DIR/pip.log"; die "pip install завершился с ошибкой"
+  fi
 else
-  tail -20 "$LOG_DIR/pip.log"; die "pip install завершился с ошибкой"
+  ok "Зависимости backend уже установлены (пропуск; --install — переустановить)"
 fi
 
-if (cd backend && "$VENV_PY" -m pytest -q >"$LOG_DIR/pytest.log" 2>&1); then
+if [ "$QUICK" -eq 1 ]; then
+  warn "--quick: pytest пропущен"
+elif (cd backend && "$VENV_PY" -m pytest -q >"$LOG_DIR/pytest.log" 2>&1); then
   ok "pytest: $(tail -1 "$LOG_DIR/pytest.log")"
 else
   tail -30 "$LOG_DIR/pytest.log"; fail "pytest: есть упавшие тесты"
@@ -198,6 +238,9 @@ popd >/dev/null || exit 2
 if wait_http "$API/health" 30; then ok "Backend отвечает: $API (таблицы созданы при старте)"; else tail -20 "$LOG_DIR/backend.log"; die "Backend не запустился"; fi
 
 step "5. Сквозной сценарий через API (данные проверяются в PostgreSQL)"
+if [ "$QUICK" -eq 1 ]; then
+  warn "--quick: сквозная проверка API пропущена"
+else
 (cd backend && "$VENV_PY" - "$API" "$WEB" <<'PY'
 import json
 import sys
@@ -416,16 +459,29 @@ sys.exit(1 if failures else 0)
 PY
 )
 [ $? -eq 0 ] || fail "Сквозной сценарий API завершился с ошибками"
+fi
 
 # ---------- 6. Frontend ----------
 if [ "$USE_FRONTEND" -eq 1 ]; then
   step "6. Frontend"
-  if [ -f package-lock.json ]; then npm_cmd=(npm ci --no-audit --no-fund); else npm_cmd=(npm install --no-audit --no-fund); fi
-  if "${npm_cmd[@]}" >"$LOG_DIR/npm-install.log" 2>&1; then ok "npm: зависимости установлены"; else tail -20 "$LOG_DIR/npm-install.log"; die "npm install завершился с ошибкой"; fi
-  if npm test >"$LOG_DIR/npm-test.log" 2>&1; then ok "npm test: $(grep -E '^ +Tests ' "$LOG_DIR/npm-test.log" | sed 's/^ *//')"; else tail -40 "$LOG_DIR/npm-test.log"; fail "npm test: есть упавшие тесты"; fi
-  if npm run build >"$LOG_DIR/npm-build.log" 2>&1; then ok "npm run build: типы и сборка в порядке"; else tail -30 "$LOG_DIR/npm-build.log"; fail "npm run build завершился с ошибкой"; fi
+  NPM_MARK="node_modules/.package-lock.json"  # npm сам обновляет этот файл при каждой установке
+  if [ "$FORCE_INSTALL" -eq 1 ] || [ ! -d node_modules ] || [ ! -f "$NPM_MARK" ] \
+    || { [ -f package-lock.json ] && [ package-lock.json -nt "$NPM_MARK" ]; } || [ package.json -nt "$NPM_MARK" ]; then
+    if [ -f package-lock.json ]; then npm_cmd=(npm ci --no-audit --no-fund); else npm_cmd=(npm install --no-audit --no-fund); fi
+    warn "Установка зависимостей frontend (при первом запуске это долго, особенно на диске /mnt/c)"
+    if "${npm_cmd[@]}" >"$LOG_DIR/npm-install.log" 2>&1; then ok "npm: зависимости установлены"; else tail -20 "$LOG_DIR/npm-install.log"; die "npm install завершился с ошибкой"; fi
+  else
+    ok "Зависимости frontend уже установлены (пропуск; --install — переустановить)"
+  fi
+  if [ "$QUICK" -eq 1 ]; then
+    warn "--quick: npm test и сборка пропущены"
+  else
+    if npm test >"$LOG_DIR/npm-test.log" 2>&1; then ok "npm test: $(grep -E "^ +Tests " "$LOG_DIR/npm-test.log" | sed "s/^ *//")"; else tail -40 "$LOG_DIR/npm-test.log"; fail "npm test: есть упавшие тесты"; fi
+    if npm run build >"$LOG_DIR/npm-build.log" 2>&1; then ok "npm run build: типы и сборка в порядке"; else tail -30 "$LOG_DIR/npm-build.log"; fail "npm run build завершился с ошибкой"; fi
+  fi
 
-  npm run dev -- --port "$FRONTEND_PORT" --strictPort >"$LOG_DIR/frontend.log" 2>&1 &
+  # Vite запускается напрямую, а не через npm: так PID указывает на сам сервер и его можно остановить через kill
+  "$ROOT/node_modules/.bin/vite" --port "$FRONTEND_PORT" --strictPort >"$LOG_DIR/frontend.log" 2>&1 &
   FRONT_PID=$!
   if wait_http "$WEB/" 30; then
     ok "Dev-сервер frontend отвечает: $WEB"

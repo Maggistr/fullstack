@@ -1,17 +1,30 @@
+# зависимости и сборка
 node_modules
 dist
+
+# секреты и локальные настройки (в репозитории только .env.example)
 .env
 .env.*
 !.env.example
-*.log
-.DS_Store
+
+# Python
 __pycache__
-.venv
-.pytest_cache
 *.pyc
+.venv
 venv
+.pytest_cache
+
+# логи и служебные файлы запуска (scripts/lab5-check.sh пишет в .run/)
+*.log
+.run/
+
+# редакторы и ОС
 .idea
 .vscode
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# скрипты не коммитим, кроме каталога scripts/
 *.sh
 !scripts/*.sh
-.run/
